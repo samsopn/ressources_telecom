@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum ResourceType {
+  LINK
+  FILE
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  icon        String?
+  color       String?
+  description String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryHierarchy")
+  resources   Resource[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  color     String?
+  resources ResourceTag[]
+  createdAt DateTime      @default(now())
+}
+
+model Collection {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  description String?
+  color       String?
+  icon        String?
+  resources   CollectionResource[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model CollectionResource {
+  collectionId String
+  resourceId   String
+  order        Int        @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resource     Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, resourceId])
+}
+
+model Resource {
+  id           String               @id @default(cuid())
+  title        String
+  description  String?
+  type         ResourceType
+  url          String?
+  filePath     String?
+  fileName     String?
+  fileSize     Int?
+  mimeType     String?
+  notes        String?
+  isFavorite   Boolean              @default(false)
+  categoryId   String?
+  category     Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags         ResourceTag[]
+  collections  CollectionResource[]
+  lastViewedAt DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model ResourceTag {
+  resourceId String
+  tagId      String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, tagId])
+}
