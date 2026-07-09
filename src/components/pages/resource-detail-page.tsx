@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ResourceDetail } from "@/lib/types";
+import { getResourceOpenHref } from "@/lib/utils";
 import { useState } from "react";
 
 async function fetchResource(id: string) {
@@ -44,10 +45,7 @@ export function ResourceDetailPageClient() {
     return <div className="px-6 py-6">Ressource introuvable</div>;
   }
 
-  const externalHref =
-    resource.type === "LINK" && resource.url
-      ? resource.url
-      : resource.filePath || "#";
+  const externalHref = getResourceOpenHref(resource);
 
   return (
     <>

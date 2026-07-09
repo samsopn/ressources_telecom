@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
+import { getVercelOidcToken } from "@vercel/oidc";
 
 export type UploadResult = {
   filePath: string;
@@ -12,34 +13,93 @@ export type UploadResult = {
 /** Limite body Vercel (server upload) ≈ 4.5 Mo */
 const MAX_SERVER_UPLOAD_BYTES = 4.5 * 1024 * 1024;
 
-function hasBlobCredentials() {
-  // Sur Vercel : OIDC (BLOB_STORE_ID + VERCEL_OIDC_TOKEN) est préféré.
-  // Hors Vercel : BLOB_READ_WRITE_TOKEN.
-  return Boolean(
-    process.env.BLOB_STORE_ID ||
-      process.env.BLOB_READ_WRITE_TOKEN ||
-      process.env.VERCEL_OIDC_TOKEN
-  );
+export type BlobAuthOptions = {
+  /** Token OIDC runtime (header x-vercel-oidc-token sur Vercel) */
+  oidcToken?: string | null;
+};
+
+async function resolveOidcToken(auth?: BlobAuthOptions) {
+  if (auth?.oidcToken) return auth.oidcToken;
+  if (process.env.VERCEL_OIDC_TOKEN) return process.env.VERCEL_OIDC_TOKEN;
+
+  try {
+    return await getVercelOidcToken();
+  } catch {
+    return undefined;
+  }
 }
 
-export async function uploadFile(file: File): Promise<UploadResult> {
+function getStoreId() {
+  return process.env.BLOB_STORE_ID ?? undefined;
+}
+
+async function buildAuthOptions(contentType: string, auth?: BlobAuthOptions) {
+  const storeId = getStoreId();
+  const oidcToken = await resolveOidcToken(auth);
+
+  // Sur Vercel : OIDC + storeId (recommandé)
+  if (oidcToken && storeId) {
+    return {
+      access: "private" as const,
+      contentType,
+      oidcToken,
+      storeId,
+    };
+  }
+
+  // Fallback : token read-write du store
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    return {
+      access: "private" as const,
+      contentType,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    };
+  }
+
+  return {
+    access: "private" as const,
+    contentType,
+  };
+}
+
+export async function hasBlobCredentials(auth?: BlobAuthOptions) {
+  if (
+    auth?.oidcToken ||
+    process.env.VERCEL_OIDC_TOKEN ||
+    process.env.BLOB_READ_WRITE_TOKEN
+  ) {
+    return true;
+  }
+
+  if (process.env.BLOB_STORE_ID) {
+    const token = await resolveOidcToken(auth);
+    return Boolean(token);
+  }
+
+  return false;
+}
+
+export async function uploadFile(
+  file: File,
+  auth?: BlobAuthOptions
+): Promise<UploadResult> {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const uniqueName = `${Date.now()}-${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
+  const contentType = file.type || "application/octet-stream";
 
-  if (hasBlobCredentials()) {
+  if (await hasBlobCredentials(auth)) {
     if (file.size > MAX_SERVER_UPLOAD_BYTES) {
       throw new Error(
         "Fichier trop volumineux (max 4,5 Mo sur Vercel). Compresse le PDF ou utilise un lien."
       );
     }
 
-    // Ne PAS passer `token` explicitement : un token explicite écrase OIDC.
-    // Sur Vercel, le SDK utilise BLOB_STORE_ID + VERCEL_OIDC_TOKEN automatiquement.
-    const blob = await put(`uploads/${uniqueName}`, buffer, {
-      access: "private",
-      contentType: file.type || "application/octet-stream",
-    });
+    const blob = await put(
+      `uploads/${uniqueName}`,
+      buffer,
+      await buildAuthOptions(contentType, auth)
+    );
 
     return {
       filePath: blob.url,
@@ -60,4 +120,17 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     fileSize: file.size,
     mimeType: file.type,
   };
+}
+
+export async function getPrivateBlob(url: string, auth?: BlobAuthOptions) {
+  const options = await buildAuthOptions(
+    "application/octet-stream",
+    auth
+  );
+
+  return get(url, options);
+}
+
+export function isPrivateBlobUrl(url: string) {
+  return url.includes(".private.blob.vercel-storage.com");
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadFile } from "@/lib/storage";
+import { hasBlobCredentials, uploadFile } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,22 +10,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
     }
 
-    const hasBlob =
-      process.env.BLOB_STORE_ID ||
-      process.env.BLOB_READ_WRITE_TOKEN ||
-      process.env.VERCEL_OIDC_TOKEN;
+    const oidcToken = request.headers.get("x-vercel-oidc-token");
 
-    if (!hasBlob && process.env.VERCEL) {
+    if (!(await hasBlobCredentials({ oidcToken })) && process.env.VERCEL) {
       return NextResponse.json(
         {
           error:
-            "Stockage Blob non configuré. Relie le store Blob au projet puis Redeploy.",
+            "Stockage Blob non configuré. Active OIDC dans Vercel Settings → Security, puis Redeploy.",
         },
         { status: 500 }
       );
     }
 
-    const result = await uploadFile(file);
+    const result = await uploadFile(file, { oidcToken });
     return NextResponse.json(result);
   } catch (error) {
     const message =

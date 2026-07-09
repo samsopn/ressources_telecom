@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, getResourceOpenHref } from "@/lib/utils";
 import type { ResourceWithRelations } from "@/lib/types";
 
 type ResourceCardProps = {
@@ -69,10 +69,7 @@ export function ResourceCard({ resource, onEdit, index = 0 }: ResourceCardProps)
     },
   });
 
-  const href =
-    resource.type === "LINK" && resource.url
-      ? resource.url
-      : resource.filePath || "#";
+  const href = getResourceOpenHref(resource);
 
   const categoryColor = resource.category?.color;
 
