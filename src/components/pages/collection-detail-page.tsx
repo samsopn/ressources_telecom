@@ -9,13 +9,6 @@ import { ResourceCard } from "@/components/resources/resource-card";
 import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { CollectionWithResources, ResourceWithRelations } from "@/lib/types";
 
 async function fetchCollection(id: string) {
@@ -103,29 +96,18 @@ export function CollectionDetailPageClient() {
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
               <p className="text-sm font-medium">Ajouter une ressource à la collection</p>
-              <Select
-                value={selectedResourceId || null}
-                onValueChange={(value) => setSelectedResourceId(value ?? "")}
+              <select
+                value={selectedResourceId}
+                onChange={(event) => setSelectedResourceId(event.target.value)}
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une ressource">
-                    {(value: string | null) => {
-                      if (!value) return "Choisir une ressource";
-                      return (
-                        availableResources.find((resource) => resource.id === value)?.title ??
-                        "Ressource"
-                      );
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {availableResources.map((resource) => (
-                    <SelectItem key={resource.id} value={resource.id} label={resource.title}>
-                      {resource.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Choisir une ressource</option>
+                {availableResources.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.title}
+                  </option>
+                ))}
+              </select>
             </div>
             <Button
               onClick={() => addResource.mutate(selectedResourceId)}

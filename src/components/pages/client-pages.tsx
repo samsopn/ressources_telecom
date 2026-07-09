@@ -129,33 +129,22 @@ export function ResourcesPageClient() {
             </SelectContent>
           </Select>
 
-          <Select
+          <select
             value={collectionFilter}
-            onValueChange={(v) => {
-              const next = v ?? "all";
+            onChange={(event) => {
+              const next = event.target.value;
               setCollectionFilter(next);
               applyFilters(typeFilter, next);
             }}
+            className="flex h-9 w-48 rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Collection">
-                {(value: string | null) => {
-                  if (!value || value === "all") return "Toutes collections";
-                  return collections.find((c) => c.id === value)?.name ?? "Collection";
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" label="Toutes collections">
-                Toutes collections
-              </SelectItem>
-              {collections.map((c) => (
-                <SelectItem key={c.id} value={c.id} label={c.name}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="all">Toutes collections</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {isLoading ? (

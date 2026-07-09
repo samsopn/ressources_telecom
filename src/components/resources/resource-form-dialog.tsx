@@ -250,30 +250,22 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
             </div>
 
             <div className="grid gap-2">
-              <Label>Catégorie</Label>
-              <Select
-                value={form.categoryId || null}
-                onValueChange={(value) => setForm({ ...form, categoryId: value ?? "" })}
+              <Label htmlFor="categoryId">Catégorie</Label>
+              <select
+                id="categoryId"
+                value={form.categoryId}
+                onChange={(event) =>
+                  setForm({ ...form, categoryId: event.target.value })
+                }
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une catégorie">
-                    {(value: string | null) => {
-                      if (!value) return "Choisir une catégorie";
-                      return (
-                        categories.find((category) => category.id === value)?.name ??
-                        "Catégorie"
-                      );
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id} label={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Choisir une catégorie</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
