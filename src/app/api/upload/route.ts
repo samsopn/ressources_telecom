@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasBlobCredentials, uploadFile } from "@/lib/storage";
+import {
+  getBlobDiagnostics,
+  hasBlobCredentials,
+  uploadFile,
+} from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,12 +15,14 @@ export async function POST(request: NextRequest) {
     }
 
     const oidcToken = request.headers.get("x-vercel-oidc-token");
+    const diagnostics = await getBlobDiagnostics({ oidcToken });
 
     if (!(await hasBlobCredentials({ oidcToken })) && process.env.VERCEL) {
       return NextResponse.json(
         {
           error:
-            "Stockage Blob non configuré. Active OIDC dans Vercel Settings → Security, puis Redeploy.",
+            "Stockage Blob non configuré. Vérifie BLOB_READ_WRITE_TOKEN puis Redeploy.",
+          diagnostics,
         },
         { status: 500 }
       );
@@ -25,8 +31,10 @@ export async function POST(request: NextRequest) {
     const result = await uploadFile(file, { oidcToken });
     return NextResponse.json(result);
   } catch (error) {
+    const oidcToken = request.headers.get("x-vercel-oidc-token");
+    const diagnostics = await getBlobDiagnostics({ oidcToken });
     const message =
       error instanceof Error ? error.message : "Échec de l'upload";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, diagnostics }, { status: 500 });
   }
 }

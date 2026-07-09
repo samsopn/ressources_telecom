@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { get, put } from "@vercel/blob";
+import { get, put, type PutCommandOptions } from "@vercel/blob";
 import { getVercelOidcToken } from "@vercel/oidc";
 
 export type UploadResult = {
@@ -14,14 +14,17 @@ export type UploadResult = {
 const MAX_SERVER_UPLOAD_BYTES = 4.5 * 1024 * 1024;
 
 export type BlobAuthOptions = {
-  /** Token OIDC runtime (header x-vercel-oidc-token sur Vercel) */
   oidcToken?: string | null;
 };
+
+function getBlobAccess(): "private" | "public" {
+  // Store Private → "private" (défaut). Store Public → mets BLOB_ACCESS=public
+  return process.env.BLOB_ACCESS === "public" ? "public" : "private";
+}
 
 async function resolveOidcToken(auth?: BlobAuthOptions) {
   if (auth?.oidcToken) return auth.oidcToken;
   if (process.env.VERCEL_OIDC_TOKEN) return process.env.VERCEL_OIDC_TOKEN;
-
   try {
     return await getVercelOidcToken();
   } catch {
@@ -29,53 +32,70 @@ async function resolveOidcToken(auth?: BlobAuthOptions) {
   }
 }
 
-function getStoreId() {
-  return process.env.BLOB_STORE_ID ?? undefined;
-}
+/**
+ * Priorité :
+ * 1. BLOB_READ_WRITE_TOKEN (le plus fiable pour un store lié)
+ * 2. OIDC + BLOB_STORE_ID (Vercel runtime)
+ */
+async function buildPutOptions(
+  contentType: string,
+  auth?: BlobAuthOptions
+): Promise<PutCommandOptions> {
+  const access = getBlobAccess();
+  const rwToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
-async function buildAuthOptions(contentType: string, auth?: BlobAuthOptions) {
-  const storeId = getStoreId();
-  const oidcToken = await resolveOidcToken(auth);
-
-  // Sur Vercel : OIDC + storeId (recommandé)
-  if (oidcToken && storeId) {
+  if (rwToken) {
     return {
-      access: "private" as const,
+      access,
       contentType,
-      oidcToken,
-      storeId,
+      token: rwToken,
+      addRandomSuffix: true,
     };
   }
 
-  // Fallback : token read-write du store
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const storeId = process.env.BLOB_STORE_ID;
+  const oidcToken = await resolveOidcToken(auth);
+
+  if (oidcToken && storeId) {
     return {
-      access: "private" as const,
+      access,
       contentType,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      oidcToken,
+      storeId,
+      addRandomSuffix: true,
     };
   }
 
   return {
-    access: "private" as const,
+    access,
     contentType,
+    addRandomSuffix: true,
+  };
+}
+
+export async function getBlobDiagnostics(auth?: BlobAuthOptions) {
+  const oidcToken = await resolveOidcToken(auth);
+  return {
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+    onVercel: Boolean(process.env.VERCEL),
+    hasReadWriteToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim()),
+    hasStoreId: Boolean(process.env.BLOB_STORE_ID),
+    hasOidcToken: Boolean(oidcToken),
+    blobAccess: getBlobAccess(),
+    authMode: process.env.BLOB_READ_WRITE_TOKEN?.trim()
+      ? "read-write-token"
+      : oidcToken && process.env.BLOB_STORE_ID
+        ? "oidc"
+        : "none",
   };
 }
 
 export async function hasBlobCredentials(auth?: BlobAuthOptions) {
-  if (
-    auth?.oidcToken ||
-    process.env.VERCEL_OIDC_TOKEN ||
-    process.env.BLOB_READ_WRITE_TOKEN
-  ) {
-    return true;
-  }
-
+  if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return true;
+  if (auth?.oidcToken || process.env.VERCEL_OIDC_TOKEN) return true;
   if (process.env.BLOB_STORE_ID) {
-    const token = await resolveOidcToken(auth);
-    return Boolean(token);
+    return Boolean(await resolveOidcToken(auth));
   }
-
   return false;
 }
 
@@ -98,7 +118,7 @@ export async function uploadFile(
     const blob = await put(
       `uploads/${uniqueName}`,
       buffer,
-      await buildAuthOptions(contentType, auth)
+      await buildPutOptions(contentType, auth)
     );
 
     return {
@@ -109,7 +129,12 @@ export async function uploadFile(
     };
   }
 
-  // Fallback local (dev XAMPP / hors Vercel)
+  if (process.env.VERCEL) {
+    throw new Error(
+      "Aucun credential Blob. Vérifie BLOB_READ_WRITE_TOKEN dans Environment Variables, puis Redeploy."
+    );
+  }
+
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   await mkdir(uploadDir, { recursive: true });
   await writeFile(path.join(uploadDir, uniqueName), buffer);
@@ -123,12 +148,21 @@ export async function uploadFile(
 }
 
 export async function getPrivateBlob(url: string, auth?: BlobAuthOptions) {
-  const options = await buildAuthOptions(
-    "application/octet-stream",
-    auth
-  );
+  const access = getBlobAccess();
+  const rwToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
-  return get(url, options);
+  if (rwToken) {
+    return get(url, { access, token: rwToken });
+  }
+
+  const storeId = process.env.BLOB_STORE_ID;
+  const oidcToken = await resolveOidcToken(auth);
+
+  if (oidcToken && storeId) {
+    return get(url, { access, oidcToken, storeId });
+  }
+
+  return get(url, { access });
 }
 
 export function isPrivateBlobUrl(url: string) {
