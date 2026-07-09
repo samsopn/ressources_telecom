@@ -167,9 +167,14 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
         body,
       });
 
-      if (!response.ok) throw new Error("Upload échoué");
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data?.error === "string" ? data.error : "Upload échoué"
+        );
+      }
+
       setForm((current) => ({
         ...current,
         type: "FILE",
@@ -179,8 +184,12 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
         fileSize: data.fileSize,
         mimeType: data.mimeType,
       }));
-    } catch {
-      setError("Impossible d'uploader le fichier.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Impossible d'uploader le fichier."
+      );
     } finally {
       setUploading(false);
     }
