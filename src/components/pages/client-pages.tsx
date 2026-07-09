@@ -138,12 +138,19 @@ export function ResourcesPageClient() {
             }}
           >
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Collection" />
+              <SelectValue placeholder="Collection">
+                {(value: string | null) => {
+                  if (!value || value === "all") return "Toutes collections";
+                  return collections.find((c) => c.id === value)?.name ?? "Collection";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes collections</SelectItem>
+              <SelectItem value="all" label="Toutes collections">
+                Toutes collections
+              </SelectItem>
               {collections.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
+                <SelectItem key={c.id} value={c.id} label={c.name}>
                   {c.name}
                 </SelectItem>
               ))}

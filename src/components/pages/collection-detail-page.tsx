@@ -104,15 +104,23 @@ export function CollectionDetailPageClient() {
             <div className="flex-1 space-y-2">
               <p className="text-sm font-medium">Ajouter une ressource à la collection</p>
               <Select
-                value={selectedResourceId}
+                value={selectedResourceId || null}
                 onValueChange={(value) => setSelectedResourceId(value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une ressource" />
+                  <SelectValue placeholder="Choisir une ressource">
+                    {(value: string | null) => {
+                      if (!value) return "Choisir une ressource";
+                      return (
+                        availableResources.find((resource) => resource.id === value)?.title ??
+                        "Ressource"
+                      );
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {availableResources.map((resource) => (
-                    <SelectItem key={resource.id} value={resource.id}>
+                    <SelectItem key={resource.id} value={resource.id} label={resource.title}>
                       {resource.title}
                     </SelectItem>
                   ))}

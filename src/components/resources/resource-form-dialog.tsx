@@ -252,15 +252,23 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
             <div className="grid gap-2">
               <Label>Catégorie</Label>
               <Select
-                value={form.categoryId}
+                value={form.categoryId || null}
                 onValueChange={(value) => setForm({ ...form, categoryId: value ?? "" })}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une catégorie" />
+                  <SelectValue placeholder="Choisir une catégorie">
+                    {(value: string | null) => {
+                      if (!value) return "Choisir une catégorie";
+                      return (
+                        categories.find((category) => category.id === value)?.name ??
+                        "Catégorie"
+                      );
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+                    <SelectItem key={category.id} value={category.id} label={category.name}>
                       {category.name}
                     </SelectItem>
                   ))}
