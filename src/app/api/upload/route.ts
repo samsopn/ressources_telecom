@@ -10,11 +10,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN && process.env.VERCEL) {
+    const hasBlob =
+      process.env.BLOB_STORE_ID ||
+      process.env.BLOB_READ_WRITE_TOKEN ||
+      process.env.VERCEL_OIDC_TOKEN;
+
+    if (!hasBlob && process.env.VERCEL) {
       return NextResponse.json(
         {
           error:
-            "Stockage Blob non configuré. Ajoute BLOB_READ_WRITE_TOKEN dans Vercel puis Redeploy.",
+            "Stockage Blob non configuré. Relie le store Blob au projet puis Redeploy.",
         },
         { status: 500 }
       );
