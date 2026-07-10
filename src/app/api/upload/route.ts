@@ -14,25 +14,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
     }
 
-    const oidcToken = request.headers.get("x-vercel-oidc-token");
-    const diagnostics = await getBlobDiagnostics({ oidcToken });
+    const diagnostics = getBlobDiagnostics();
 
-    if (!(await hasBlobCredentials({ oidcToken })) && process.env.VERCEL) {
+    if (!hasBlobCredentials() && process.env.VERCEL) {
       return NextResponse.json(
         {
           error:
-            "Stockage Blob non configuré. Vérifie BLOB_READ_WRITE_TOKEN puis Redeploy.",
+            "BLOB_READ_WRITE_TOKEN manquant. Crée un store Blob Public et Redeploy.",
           diagnostics,
         },
         { status: 500 }
       );
     }
 
-    const result = await uploadFile(file, { oidcToken });
+    const result = await uploadFile(file);
     return NextResponse.json(result);
   } catch (error) {
-    const oidcToken = request.headers.get("x-vercel-oidc-token");
-    const diagnostics = await getBlobDiagnostics({ oidcToken });
+    const diagnostics = getBlobDiagnostics();
     const message =
       error instanceof Error ? error.message : "Échec de l'upload";
     return NextResponse.json({ error: message, diagnostics }, { status: 500 });

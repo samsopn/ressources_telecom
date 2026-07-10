@@ -172,7 +172,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
       if (!response.ok) {
         const details =
           data?.diagnostics != null
-            ? ` [${data.diagnostics.authMode}, commit=${String(data.diagnostics.commit ?? "?").slice(0, 7)}]`
+            ? ` [${data.diagnostics.authMode}/${data.diagnostics.blobAccess}, commit=${String(data.diagnostics.commit ?? "?").slice(0, 7)}]`
             : "";
         throw new Error(
           `${typeof data?.error === "string" ? data.error : "Upload échoué"}${details}`

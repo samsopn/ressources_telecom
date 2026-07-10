@@ -9,8 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const oidcToken = request.headers.get("x-vercel-oidc-token");
-    const result = await getPrivateBlob(url, { oidcToken });
+    const result = await getPrivateBlob(url);
 
     if (!result || result.statusCode !== 200 || !result.stream) {
       return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
