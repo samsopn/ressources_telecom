@@ -28,13 +28,20 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as ResourceType | null;
   const favorite = searchParams.get("favorite");
   const tag = searchParams.get("tag");
+  const tags = searchParams.getAll("tags").flatMap((value) => value.split(",")).map((t) => t.trim()).filter(Boolean);
   const collectionId = searchParams.get("collectionId");
   const recent = searchParams.get("recent");
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
+  const uncategorized = searchParams.get("uncategorized");
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? 12)));
 
+  const tagFilters = [...new Set([...(tag ? [tag] : []), ...tags])];
+
   const where: Prisma.ResourceWhereInput = {
     ...(categoryId ? { categoryId } : {}),
+    ...(uncategorized === "true" ? { categoryId: null } : {}),
     ...(type ? { type } : {}),
     ...(favorite === "true" ? { isFavorite: true } : {}),
     ...(recent === "true" ? { lastViewedAt: { not: null } } : {}),
@@ -45,12 +52,22 @@ export async function GET(request: NextRequest) {
           },
         }
       : {}),
-    ...(tag
+    ...(tagFilters.length
       ? {
-          tags: {
-            some: {
-              tag: { name: tag },
+          AND: tagFilters.map((name) => ({
+            tags: {
+              some: {
+                tag: { name },
+              },
             },
+          })),
+        }
+      : {}),
+    ...(dateFrom || dateTo
+      ? {
+          createdAt: {
+            ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+            ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999Z`) } : {}),
           },
         }
       : {}),
@@ -61,6 +78,7 @@ export async function GET(request: NextRequest) {
             { description: { contains: q } },
             { notes: { contains: q } },
             { url: { contains: q } },
+            { fileName: { contains: q } },
           ],
         }
       : {}),

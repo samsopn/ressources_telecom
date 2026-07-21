@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, FileText, Layers, Link2, Plus, Star } from "lucide-react";
+import { BookOpen, FileText, Layers, Link2, Plus, Star, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/app-header";
 import { ResourceCard } from "@/components/resources/resource-card";
 import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
 import { useAppActions } from "@/providers/app-actions-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   Select,
@@ -36,6 +37,7 @@ async function fetchCollections() {
 export function ResourcesPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { openAddResource } = useAppActions();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,6 +46,13 @@ export function ResourcesPageClient() {
   const [collectionFilter, setCollectionFilter] = useState(
     searchParams.get("collectionId") ?? "all"
   );
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "");
+  const [multiTags, setMultiTags] = useState(searchParams.get("tags") ?? "");
+  const [uncategorized, setUncategorized] = useState(
+    searchParams.get("uncategorized") === "true"
+  );
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const page = Number(searchParams.get("page") ?? 1);
 
   const queryParams = useMemo(() => {
@@ -54,10 +63,28 @@ export function ResourcesPageClient() {
     else params.delete("type");
     if (collectionFilter !== "all") params.set("collectionId", collectionFilter);
     else params.delete("collectionId");
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    else params.delete("dateFrom");
+    if (dateTo) params.set("dateTo", dateTo);
+    else params.delete("dateTo");
+    if (multiTags.trim()) params.set("tags", multiTags.trim());
+    else params.delete("tags");
+    if (uncategorized) params.set("uncategorized", "true");
+    else params.delete("uncategorized");
     params.set("page", String(page));
     params.set("limit", "12");
     return params;
-  }, [searchParams, search, typeFilter, collectionFilter, page]);
+  }, [
+    searchParams,
+    search,
+    typeFilter,
+    collectionFilter,
+    dateFrom,
+    dateTo,
+    multiTags,
+    uncategorized,
+    page,
+  ]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["resources", queryParams.toString()],
@@ -71,6 +98,27 @@ export function ResourcesPageClient() {
 
   const resources = data?.resources ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const bulkAction = useMutation({
+    mutationFn: async (payload: {
+      action: "favorite" | "unfavorite" | "delete";
+    }) => {
+      const response = await fetch("/api/resources/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, ...payload }),
+      });
+      if (!response.ok) throw new Error("Action groupée échouée");
+      return response.json();
+    },
+    onSuccess: () => {
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+    },
+  });
 
   const title = searchParams.get("favorite")
     ? "Favoris"
@@ -92,8 +140,30 @@ export function ResourcesPageClient() {
     else params.delete("type");
     if (nextCollection !== "all") params.set("collectionId", nextCollection);
     else params.delete("collectionId");
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    else params.delete("dateFrom");
+    if (dateTo) params.set("dateTo", dateTo);
+    else params.delete("dateTo");
+    if (multiTags.trim()) params.set("tags", multiTags.trim());
+    else params.delete("tags");
+    if (uncategorized) params.set("uncategorized", "true");
+    else params.delete("uncategorized");
     params.set("page", "1");
     router.push(`/resources?${params.toString()}`);
+  }
+
+  function toggleSelect(id: string, selected: boolean) {
+    setSelectedIds((current) =>
+      selected ? [...new Set([...current, id])] : current.filter((item) => item !== id)
+    );
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === resources.length) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(resources.map((resource) => resource.id));
   }
 
   return (
@@ -145,7 +215,86 @@ export function ResourcesPageClient() {
               </option>
             ))}
           </select>
+
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            className="h-9 w-40"
+            aria-label="Date de début"
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            className="h-9 w-40"
+            aria-label="Date de fin"
+          />
+          <Input
+            value={multiTags}
+            onChange={(event) => setMultiTags(event.target.value)}
+            placeholder="Tags (BGP, OSPF)"
+            className="h-9 w-48"
+          />
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={uncategorized}
+              onChange={(event) => setUncategorized(event.target.checked)}
+            />
+            Sans catégorie
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => applyFilters(typeFilter, collectionFilter)}
+          >
+            Appliquer
+          </Button>
         </div>
+
+        {resources.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selectedIds.length > 0 && selectedIds.length === resources.length}
+                onChange={toggleSelectAll}
+              />
+              Tout sélectionner ({selectedIds.length})
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedIds.length === 0 || bulkAction.isPending}
+              onClick={() => bulkAction.mutate({ action: "favorite" })}
+            >
+              <Star className="size-3.5" />
+              Favoris
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedIds.length === 0 || bulkAction.isPending}
+              onClick={() => bulkAction.mutate({ action: "unfavorite" })}
+            >
+              Retirer favoris
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={selectedIds.length === 0 || bulkAction.isPending}
+              onClick={() => {
+                if (confirm(`Supprimer ${selectedIds.length} ressource(s) ?`)) {
+                  bulkAction.mutate({ action: "delete" });
+                }
+              }}
+            >
+              <Trash2 className="size-3.5" />
+              Supprimer
+            </Button>
+          </div>
+        ) : null}
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -169,6 +318,9 @@ export function ResourcesPageClient() {
                   key={resource.id}
                   resource={resource}
                   index={index}
+                  selectable
+                  selected={selectedIds.includes(resource.id)}
+                  onSelectChange={(selected) => toggleSelect(resource.id, selected)}
                   onEdit={(item) => {
                     setEditingResource(item);
                     setDialogOpen(true);

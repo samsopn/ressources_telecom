@@ -10,6 +10,54 @@ const addResourceSchema = z.object({
   resourceId: z.string().min(1),
 });
 
+const updateStatusSchema = z.object({
+  resourceId: z.string().min(1),
+  status: z.enum(["TODO", "DOING", "DONE"]),
+});
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const { id } = await context.params;
+
+  try {
+    const body = updateStatusSchema.parse(await request.json());
+
+    await prisma.collectionResource.update({
+      where: {
+        collectionId_resourceId: {
+          collectionId: id,
+          resourceId: body.resourceId,
+        },
+      },
+      data: {
+        status: body.status,
+        completedAt: body.status === "DONE" ? new Date() : null,
+      },
+    });
+
+    const collection = await prisma.collection.findUnique({
+      where: { id },
+      include: {
+        resources: {
+          include: {
+            resource: {
+              include: {
+                category: true,
+                tags: { include: { tag: true } },
+              },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
+        _count: { select: { resources: true } },
+      },
+    });
+
+    return NextResponse.json(collection);
+  } catch {
+    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+  }
+}
+
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 

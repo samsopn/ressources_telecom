@@ -33,9 +33,19 @@ type ResourceCardProps = {
   resource: ResourceWithRelations;
   onEdit?: (resource: ResourceWithRelations) => void;
   index?: number;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectChange?: (selected: boolean) => void;
 };
 
-export function ResourceCard({ resource, onEdit, index = 0 }: ResourceCardProps) {
+export function ResourceCard({
+  resource,
+  onEdit,
+  index = 0,
+  selectable,
+  selected,
+  onSelectChange,
+}: ResourceCardProps) {
   const queryClient = useQueryClient();
 
   const toggleFavorite = useMutation({
@@ -84,6 +94,15 @@ export function ResourceCard({ resource, onEdit, index = 0 }: ResourceCardProps)
       <CardHeader className="space-y-3 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
+            {selectable ? (
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(event) => onSelectChange?.(event.target.checked)}
+                className="size-4 rounded border-border"
+                aria-label="Sélectionner la ressource"
+              />
+            ) : null}
             <div
               className={cn(
                 "rounded-xl p-2.5 transition-all duration-300 group-hover:scale-110",

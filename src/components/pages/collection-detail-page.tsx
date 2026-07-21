@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/app-header";
 import { ResourceCard } from "@/components/resources/resource-card";
 import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CollectionWithResources, ResourceWithRelations } from "@/lib/types";
@@ -23,6 +24,8 @@ async function fetchAllResources() {
   const data = await response.json();
   return data.resources as ResourceWithRelations[];
 }
+
+type StudyStatus = "TODO" | "DOING" | "DONE";
 
 export function CollectionDetailPageClient() {
   const params = useParams<{ id: string }>();
@@ -72,9 +75,34 @@ export function CollectionDetailPageClient() {
     },
   });
 
+  const updateStatus = useMutation({
+    mutationFn: async ({
+      resourceId,
+      status,
+    }: {
+      resourceId: string;
+      status: StudyStatus;
+    }) => {
+      const response = await fetch(`/api/collections/${params.id}/resources`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceId, status }),
+      });
+      if (!response.ok) throw new Error("Échec");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collection", params.id] });
+    },
+  });
+
   const availableResources = allResources.filter(
     (resource) => !collection?.resources.some((item) => item.resourceId === resource.id)
   );
+
+  const total = collection?.resources.length ?? 0;
+  const done = collection?.resources.filter((item) => item.status === "DONE").length ?? 0;
+  const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   if (isLoading) {
     return <div className="px-6 py-6">Chargement...</div>;
@@ -92,6 +120,23 @@ export function CollectionDetailPageClient() {
       />
 
       <div className="space-y-6 px-6 py-6">
+        <Card className="glass-card">
+          <CardContent className="space-y-3 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium">Progression du parcours</p>
+              <Badge variant="secondary">
+                {done}/{total} terminé{done > 1 ? "s" : ""} · {progress}%
+              </Badge>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-brand transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="glass-card">
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
@@ -128,25 +173,53 @@ export function CollectionDetailPageClient() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {collection.resources.map(({ resource }, index) => (
-              <div key={resource.id} className="relative">
+            {collection.resources.map((item, index) => (
+              <div key={item.resource.id} className="relative space-y-2">
                 <ResourceCard
-                  resource={resource}
+                  resource={item.resource}
                   index={index}
-                  onEdit={(item) => {
-                    setEditingResource(item);
+                  onEdit={(resource) => {
+                    setEditingResource(resource);
                     setDialogOpen(true);
                   }}
                 />
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="absolute top-3 right-12 text-destructive hover:text-destructive"
-                  onClick={() => removeResource.mutate(resource.id)}
-                  aria-label="Retirer de la collection"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <select
+                    value={item.status}
+                    onChange={(event) =>
+                      updateStatus.mutate({
+                        resourceId: item.resource.id,
+                        status: event.target.value as StudyStatus,
+                      })
+                    }
+                    className="h-8 flex-1 rounded-lg border border-input bg-transparent px-2 text-xs"
+                  >
+                    <option value="TODO">À faire</option>
+                    <option value="DOING">En cours</option>
+                    <option value="DONE">Terminé</option>
+                  </select>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => removeResource.mutate(item.resource.id)}
+                    aria-label="Retirer de la collection"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1 px-1 text-xs text-muted-foreground">
+                  {item.status === "DONE" ? (
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                  ) : (
+                    <Circle className="size-3.5" />
+                  )}
+                  {item.status === "DONE"
+                    ? "Complété"
+                    : item.status === "DOING"
+                      ? "En cours"
+                      : "À étudier"}
+                </div>
               </div>
             ))}
           </div>

@@ -12,6 +12,12 @@ enum ResourceType {
   FILE
 }
 
+enum StudyStatus {
+  TODO
+  DOING
+  DONE
+}
+
 model Category {
   id          String     @id @default(cuid())
   name        String
@@ -50,9 +56,11 @@ model Collection {
 model CollectionResource {
   collectionId String
   resourceId   String
-  order        Int        @default(0)
-  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  resource     Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  order        Int         @default(0)
+  status       StudyStatus @default(TODO)
+  completedAt  DateTime?
+  collection   Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resource     Resource    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@id([collectionId, resourceId])
 }

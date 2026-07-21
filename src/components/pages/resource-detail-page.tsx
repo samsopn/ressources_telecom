@@ -11,21 +11,30 @@ import {
   FolderKanban,
   Link2,
   Pencil,
+  Sparkles,
   Star,
 } from "lucide-react";
+import { useState } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ResourceDetail } from "@/lib/types";
+import { Markdown } from "@/components/ui/markdown";
+import { getPreviewEmbedUrl } from "@/lib/preview";
+import type { ResourceDetail, ResourceWithRelations } from "@/lib/types";
 import { getResourceOpenHref } from "@/lib/utils";
-import { useState } from "react";
 
 async function fetchResource(id: string) {
   const response = await fetch(`/api/resources/${id}`);
   if (!response.ok) throw new Error("Ressource introuvable");
   return response.json() as Promise<ResourceDetail>;
+}
+
+async function fetchRelated(id: string) {
+  const response = await fetch(`/api/resources/${id}/related`);
+  if (!response.ok) throw new Error("Impossible de charger les suggestions");
+  return response.json() as Promise<(ResourceWithRelations & { score: number })[]>;
 }
 
 export function ResourceDetailPageClient() {
@@ -37,6 +46,12 @@ export function ResourceDetailPageClient() {
     queryFn: () => fetchResource(params.id),
   });
 
+  const { data: related = [] } = useQuery({
+    queryKey: ["resource-related", params.id],
+    queryFn: () => fetchRelated(params.id),
+    enabled: Boolean(params.id),
+  });
+
   if (isLoading) {
     return <div className="px-6 py-6">Chargement...</div>;
   }
@@ -46,12 +61,13 @@ export function ResourceDetailPageClient() {
   }
 
   const externalHref = getResourceOpenHref(resource);
+  const previewUrl = getPreviewEmbedUrl(resource);
 
   return (
     <>
       <AppHeader title={resource.title} description="Fiche détaillée de la ressource" />
 
-      <div className="mx-auto max-w-3xl space-y-6 px-6 py-6">
+      <div className="mx-auto max-w-4xl space-y-6 px-6 py-6">
         <Button variant="outline" size="sm" render={<Link href="/resources" />}>
           <ArrowLeft data-icon="inline-start" />
           Retour
@@ -87,6 +103,19 @@ export function ResourceDetailPageClient() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {previewUrl ? (
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Aperçu</h3>
+                <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+                  <iframe
+                    title={`Aperçu ${resource.title}`}
+                    src={previewUrl}
+                    className="h-[420px] w-full"
+                  />
+                </div>
+              </div>
+            ) : null}
+
             {resource.description ? (
               <div>
                 <h3 className="mb-2 text-sm font-medium text-muted-foreground">Description</h3>
@@ -94,12 +123,12 @@ export function ResourceDetailPageClient() {
               </div>
             ) : null}
 
-            {resource.notes ? (
-              <div>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Notes personnelles</h3>
-                <p className="rounded-lg bg-muted/50 p-3 text-sm leading-relaxed">{resource.notes}</p>
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">Notes personnelles</h3>
+              <div className="rounded-lg bg-muted/50 p-3">
+                <Markdown content={resource.notes ?? ""} />
               </div>
-            ) : null}
+            </div>
 
             <div className="flex flex-wrap gap-2">
               {resource.tags.map(({ tag }) => (
@@ -123,7 +152,11 @@ export function ResourceDetailPageClient() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {resource.collections.map(({ collection }) => (
-                    <Badge key={collection.id} variant="secondary" render={<Link href={`/collections/${collection.id}`} />}>
+                    <Badge
+                      key={collection.id}
+                      variant="secondary"
+                      render={<Link href={`/collections/${collection.id}`} />}
+                    >
                       {collection.name}
                     </Badge>
                   ))}
@@ -145,6 +178,31 @@ export function ResourceDetailPageClient() {
             </div>
           </CardContent>
         </Card>
+
+        {related.length > 0 ? (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-heading text-lg">
+                <Sparkles className="size-4 text-primary" />
+                Ressources liées
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {related.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/resources/${item.id}`}
+                  className="rounded-xl border border-border/50 bg-muted/20 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <p className="font-medium line-clamp-1">{item.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.category?.name ?? "Sans catégorie"} · score {item.score}
+                  </p>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       <ResourceFormDialog

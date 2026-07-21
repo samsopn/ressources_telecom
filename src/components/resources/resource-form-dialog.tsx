@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDropZone } from "@/components/resources/file-drop-zone";
+import { NotesEditor } from "@/components/resources/notes-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -300,15 +301,13 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Notes personnelles</Label>
-            <Textarea
-              id="notes"
-              value={form.notes}
-              onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="Ce que tu veux retenir de cette ressource"
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label>Notes personnelles</Label>
+              <NotesEditor
+                value={form.notes}
+                onChange={(notes) => setForm({ ...form, notes })}
+              />
+            </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
