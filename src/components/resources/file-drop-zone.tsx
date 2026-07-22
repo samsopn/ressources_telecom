@@ -34,7 +34,7 @@ export function FileDropZone({ fileName, uploading, onFileSelect }: FileDropZone
       className={cn(
         "relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-sm transition-all duration-200",
         isDragging
-          ? "scale-[1.02] border-primary bg-primary/10 text-primary shadow-[0_0_0_4px_oklch(0.58_0.17_235/0.12)]"
+          ? "scale-[1.02] border-primary bg-primary/10 text-primary shadow-[0_0_0_4px_oklch(0.5_0.1_175/0.14)]"
           : "border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/30",
         uploading && "pointer-events-none opacity-60"
       )}
