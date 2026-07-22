@@ -202,117 +202,121 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(90vh,920px)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-4 pt-4 pb-3 pr-12">
           <DialogTitle>{resource ? "Modifier la ressource" : "Ajouter une ressource"}</DialogTitle>
           <DialogDescription>
             Centralise un lien web ou un fichier pour ton hub réseau & télécom.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Titre</Label>
-            <Input
-              id="title"
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-              placeholder="Ex: Guide BGP avancé"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
-              placeholder="Résumé rapide de la ressource"
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Type</Label>
-              <Select
-                value={form.type}
-                onValueChange={(value) =>
-                  setForm({ ...form, type: value as "LINK" | "FILE" })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LINK">Lien web</SelectItem>
-                  <SelectItem value="FILE">Fichier</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="categoryId">Catégorie</Label>
-              <select
-                id="categoryId"
-                value={form.categoryId}
-                onChange={(event) =>
-                  setForm({ ...form, categoryId: event.target.value })
-                }
-                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-              >
-                <option value="">Choisir une catégorie</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {form.type === "LINK" ? (
-            <div className="grid gap-2">
-              <Label htmlFor="url">URL</Label>
+              <Label htmlFor="title">Titre</Label>
               <Input
-                id="url"
-                value={form.url}
-                onChange={(event) => setForm({ ...form, url: event.target.value })}
-                placeholder="https://..."
+                id="title"
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                placeholder="Ex: Guide BGP avancé"
               />
             </div>
-          ) : (
-            <div className="grid gap-2">
-              <Label>Fichier</Label>
-              <FileDropZone
-                fileName={form.fileName}
-                uploading={uploading}
-                onFileSelect={(file) => void handleFileUpload(file)}
-              />
-            </div>
-          )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="tags">Tags (séparés par des virgules)</Label>
-            <Input
-              id="tags"
-              value={form.tagNames}
-              onChange={(event) => setForm({ ...form, tagNames: event.target.value })}
-              placeholder="BGP, MPLS, CCNP"
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={form.description}
+                onChange={(event) => setForm({ ...form, description: event.target.value })}
+                placeholder="Résumé rapide de la ressource"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Type</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={(value) =>
+                    setForm({ ...form, type: value as "LINK" | "FILE" })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LINK">Lien web</SelectItem>
+                    <SelectItem value="FILE">Fichier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="categoryId">Catégorie</Label>
+                <select
+                  id="categoryId"
+                  value={form.categoryId}
+                  onChange={(event) =>
+                    setForm({ ...form, categoryId: event.target.value })
+                  }
+                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                >
+                  <option value="">Choisir une catégorie</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {form.type === "LINK" ? (
+              <div className="grid gap-2">
+                <Label htmlFor="url">URL</Label>
+                <Input
+                  id="url"
+                  value={form.url}
+                  onChange={(event) => setForm({ ...form, url: event.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <Label>Fichier</Label>
+                <FileDropZone
+                  fileName={form.fileName}
+                  uploading={uploading}
+                  onFileSelect={(file) => void handleFileUpload(file)}
+                />
+              </div>
+            )}
+
+            <div className="grid gap-2">
+              <Label htmlFor="tags">Tags (séparés par des virgules)</Label>
+              <Input
+                id="tags"
+                value={form.tagNames}
+                onChange={(event) => setForm({ ...form, tagNames: event.target.value })}
+                placeholder="BGP, MPLS, CCNP"
+              />
+            </div>
 
             <div className="grid gap-2">
               <Label>Notes personnelles</Label>
               <NotesEditor
                 value={form.notes}
                 onChange={(notes) => setForm({ ...form, notes })}
+                rows={4}
               />
             </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-none border-t bg-muted/50 p-4 sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
