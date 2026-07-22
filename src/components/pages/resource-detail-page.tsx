@@ -1,6 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { AppHeader } from "@/components/layout/app-header";
+import { AiAssistButtons } from "@/components/resources/ai-assist-buttons";
+import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Markdown } from "@/components/ui/markdown";
+import { getPreviewEmbedUrl } from "@/lib/preview";
+import type { ResourceDetail, ResourceWithRelations } from "@/lib/types";
+import { getResourceOpenHref } from "@/lib/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -15,15 +25,6 @@ import {
   Star,
 } from "lucide-react";
 import { useState } from "react";
-import { AppHeader } from "@/components/layout/app-header";
-import { ResourceFormDialog } from "@/components/resources/resource-form-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Markdown } from "@/components/ui/markdown";
-import { getPreviewEmbedUrl } from "@/lib/preview";
-import type { ResourceDetail, ResourceWithRelations } from "@/lib/types";
-import { getResourceOpenHref } from "@/lib/utils";
 
 async function fetchResource(id: string) {
   const response = await fetch(`/api/resources/${id}`);
@@ -37,8 +38,15 @@ async function fetchRelated(id: string) {
   return response.json() as Promise<(ResourceWithRelations & { score: number })[]>;
 }
 
+async function fetchCategories() {
+  const response = await fetch("/api/categories");
+  if (!response.ok) throw new Error("Impossible de charger les catégories");
+  return response.json() as Promise<{ id: string; name: string }[]>;
+}
+
 export function ResourceDetailPageClient() {
   const params = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: resource, isLoading } = useQuery({
@@ -50,6 +58,29 @@ export function ResourceDetailPageClient() {
     queryKey: ["resource-related", params.id],
     queryFn: () => fetchRelated(params.id),
     enabled: Boolean(params.id),
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+
+  const patchResource = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const response = await fetch(`/api/resources/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Impossible de mettre à jour");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resource", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
   });
 
   if (isLoading) {
@@ -129,6 +160,29 @@ export function ResourceDetailPageClient() {
                 <Markdown content={resource.notes ?? ""} />
               </div>
             </div>
+
+            <AiAssistButtons
+              title={resource.title}
+              description={resource.description ?? ""}
+              url={resource.url ?? undefined}
+              notes={resource.notes ?? ""}
+              categoryNames={categories.map((category) => category.name)}
+              onApplySuggest={({ categoryName, tags, description }) => {
+                const matched = categories.find(
+                  (category) =>
+                    category.name.toLowerCase() ===
+                    (categoryName ?? "").toLowerCase()
+                );
+                void patchResource.mutateAsync({
+                  ...(matched ? { categoryId: matched.id } : {}),
+                  ...(description ? { description } : {}),
+                  ...(tags.length ? { tagNames: tags } : {}),
+                });
+              }}
+              onApplyNotes={(notes) => {
+                void patchResource.mutateAsync({ notes });
+              }}
+            />
 
             <div className="flex flex-wrap gap-2">
               {resource.tags.map(({ tag }) => (

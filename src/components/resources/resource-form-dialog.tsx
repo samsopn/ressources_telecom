@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDropZone } from "@/components/resources/file-drop-zone";
 import { NotesEditor } from "@/components/resources/notes-editor";
+import { AiAssistButtons } from "@/components/resources/ai-assist-buttons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -294,6 +295,30 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
                 rows={4}
               />
             </div>
+
+            <AiAssistButtons
+              title={form.title}
+              description={form.description}
+              url={form.url}
+              notes={form.notes}
+              categoryNames={categories.map((category) => category.name)}
+              onApplySuggest={({ categoryName, tags, description }) => {
+                const matchedCategory = categories.find(
+                  (category) =>
+                    category.name.toLowerCase() ===
+                    (categoryName ?? "").toLowerCase()
+                );
+                setForm((current) => ({
+                  ...current,
+                  categoryId: matchedCategory?.id ?? current.categoryId,
+                  tagNames: tags.length
+                    ? tags.join(", ")
+                    : current.tagNames,
+                  description: description || current.description,
+                }));
+              }}
+              onApplyNotes={(notes) => setForm((current) => ({ ...current, notes }))}
+            />
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
           </div>

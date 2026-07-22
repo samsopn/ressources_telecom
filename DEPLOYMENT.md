@@ -188,6 +188,25 @@ Sans Blob, utilise type **LINK** + Google Drive.
 
 ---
 
+## Assistant IA (optionnel)
+
+L’app propose **tags/catégorie**, **résumé de notes** et **explication pédagogique**.
+
+1. Crée une clé gratuite Gemini : https://aistudio.google.com/apikey  
+2. Vercel → **Settings → Environment Variables** :
+   - `GEMINI_API_KEY` = ta clé
+   - (optionnel) `AI_MODEL` = `gemini-2.0-flash`
+3. **Redeploy**
+4. Ouvre une ressource → bloc **Assistant IA**, ou le formulaire Ajouter/Modifier
+
+Alternatives :
+- `OPENAI_API_KEY` (+ optionnel `AI_MODEL=gpt-4o-mini`)
+- `GROQ_API_KEY` (API compatible OpenAI, souvent gratuite)
+
+Diagnostic : `GET /api/ai/assist` (connecté) → `"configured": true`
+
+---
+
 ## Checklist finale
 
 - [ ] Repo GitHub à jour (`main`)
