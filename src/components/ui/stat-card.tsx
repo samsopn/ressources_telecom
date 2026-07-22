@@ -73,7 +73,7 @@ export function StatCard({
         </div>
       </CardHeader>
       <CardContent className="relative">
-        <p className={cn("font-heading text-4xl font-bold tracking-tight", styles.value)}>
+        <p className={cn("font-heading text-4xl font-bold tracking-tight animate-count-pop", styles.value)}>
           {value}
         </p>
       </CardContent>

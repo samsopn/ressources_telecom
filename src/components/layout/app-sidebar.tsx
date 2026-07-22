@@ -311,11 +311,11 @@ export function AppSidebar() {
     >
       <div className="shrink-0 border-b border-sidebar-border px-4 py-5">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="logo-pulse flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-brand text-primary-foreground shadow-md shadow-primary/20">
             <Network className="size-4" />
           </div>
           {!collapsed ? (
-            <div className="min-w-0">
+            <div className="min-w-0 animate-fade-in">
               <p className="truncate font-heading text-sm font-semibold">Ressources Telecom</p>
               <p className="truncate text-xs text-muted-foreground">Hub réseau & télécom</p>
             </div>
