@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
+import { JetBrains_Mono, Poppins } from "next/font/google";
 import { Providers } from "@/providers/providers";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
+const poppins = Poppins({
   variable: "--font-sans",
   subsets: ["latin"],
-  display: "swap",
-});
-
-const sora = Sora({
-  variable: "--font-heading",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -38,9 +33,9 @@ export default function RootLayout({
     <html
       lang="fr"
       suppressHydrationWarning
-      className={`${plusJakarta.variable} ${sora.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${poppins.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">
+      <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>
