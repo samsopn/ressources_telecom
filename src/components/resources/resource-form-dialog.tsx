@@ -160,25 +160,8 @@ export function ResourceFormDialog({ open, onOpenChange, resource }: ResourceFor
     setError(null);
 
     try {
-      const body = new FormData();
-      body.append("file", file);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const details =
-          data?.diagnostics != null
-            ? ` [${data.diagnostics.authMode}/${data.diagnostics.blobAccess}, commit=${String(data.diagnostics.commit ?? "?").slice(0, 7)}]`
-            : "";
-        throw new Error(
-          `${typeof data?.error === "string" ? data.error : "Upload échoué"}${details}`
-        );
-      }
+      const { uploadResourceFile } = await import("@/lib/client-upload");
+      const data = await uploadResourceFile(file);
 
       setForm((current) => ({
         ...current,

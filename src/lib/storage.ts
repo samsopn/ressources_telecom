@@ -17,11 +17,14 @@ const MAX_SERVER_UPLOAD_BYTES = 4.5 * 1024 * 1024;
  * - Store Public  → BLOB_ACCESS=public  (recommandé)
  * - Store Private → BLOB_ACCESS=private
  */
-function getBlobAccess(): "private" | "public" {
+export function getBlobAccess(): "private" | "public" {
   if (process.env.BLOB_ACCESS === "private") return "private";
   // Défaut public : plus simple pour un hub perso + URLs ouvrables directement
   return "public";
 }
+
+/** Limite upload client (navigateur → Blob), au-delà utiliser un lien Drive */
+export const MAX_CLIENT_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 function getReadWriteToken() {
   return process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined;

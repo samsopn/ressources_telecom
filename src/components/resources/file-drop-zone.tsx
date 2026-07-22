@@ -62,7 +62,7 @@ export function FileDropZone({ fileName, uploading, onFileSelect }: FileDropZone
             <p className="font-medium text-foreground">
               {isDragging ? "Dépose le fichier ici" : "Glisse un fichier ou clique pour parcourir"}
             </p>
-            <p className="mt-1 text-xs">PDF, configs, docs, images...</p>
+            <p className="mt-1 text-xs">PDF, configs, docs, images… max 50 Mo</p>
           </>
         )}
       </div>
