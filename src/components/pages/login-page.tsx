@@ -74,7 +74,7 @@ export function LoginPageClient() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
-                className="h-10 transition-shadow duration-200 focus-visible:shadow-[0_0_0_3px_oklch(0.5_0.1_175/0.16)]"
+                className="h-10 transition-shadow duration-200 focus-visible:shadow-[0_0_0_3px_oklch(0.68_0.1_240/0.22)]"
                 required
               />
             </div>
@@ -86,7 +86,7 @@ export function LoginPageClient() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
-                className="h-10 transition-shadow duration-200 focus-visible:shadow-[0_0_0_3px_oklch(0.5_0.1_175/0.16)]"
+                className="h-10 transition-shadow duration-200 focus-visible:shadow-[0_0_0_3px_oklch(0.68_0.1_240/0.22)]"
                 required
               />
             </div>
